@@ -72,7 +72,7 @@ export default function HomePage() {
     <div>
       <section className="relative overflow-hidden bg-brand-300">
         <div className="pointer-events-none absolute inset-0 bg-white/10" />
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8 lg:py-20">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 sm:px-6 md:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)] md:gap-7 lg:gap-8 lg:py-20">
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/60 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-900 backdrop-blur">
               <VanIcon className="h-4 w-4" /> 58 wilayas · One platform
@@ -116,13 +116,13 @@ export default function HomePage() {
             </form>
           </div>
 
-          <div className="relative hidden min-h-[430px] lg:block" aria-label="Zackvan caravan illustration">
+          <div className="relative mt-2 min-h-[330px] md:mt-0 lg:min-h-[430px]" aria-label="Zackvan caravan illustration">
             <div className="absolute right-4 top-4 h-20 w-20 rounded-full border-8 border-white/60" />
             <div className="absolute bottom-8 left-2 h-28 w-28 rounded-full border border-brand-400/70 bg-brand-200/60" />
             <div className="absolute right-10 top-24 h-3 w-3 rounded-full bg-brand-700" />
             <div className="absolute left-12 top-16 h-2 w-2 rounded-full bg-white" />
-            <div className="relative flex h-full min-h-[430px] items-center justify-center rounded-[2.5rem] border border-white/70 bg-white/45 p-5 shadow-2xl shadow-brand-800/10 backdrop-blur-sm">
-              <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[2rem] border border-brand-200/80 bg-brand-50/80">
+            <div className="relative flex h-full min-h-[330px] items-center justify-center rounded-[2.5rem] border border-white/70 bg-white/45 p-3 shadow-2xl shadow-brand-800/10 backdrop-blur-sm sm:p-5 lg:min-h-[430px]">
+              <div className="relative h-[300px] w-full overflow-hidden rounded-[2rem] border border-brand-200/80 bg-brand-50/80 sm:h-[370px] lg:h-[390px]">
                 <Image
                   src="/icon.png"
                   alt="Zackvan camper van ready for an Algerian road trip"
