@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import {
   ArrowRight,
   CalendarDays,
@@ -71,8 +72,8 @@ export default function HomePage() {
     <div>
       <section className="relative overflow-hidden bg-brand-300">
         <div className="pointer-events-none absolute inset-0 bg-white/10" />
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-          <div className="max-w-2xl">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8 lg:py-20">
+          <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/60 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-900 backdrop-blur">
               <VanIcon className="h-4 w-4" /> 58 wilayas · One platform
             </span>
@@ -113,6 +114,32 @@ export default function HomePage() {
                 <Search className="h-4 w-4" /> Search
               </button>
             </form>
+          </div>
+
+          <div className="relative hidden min-h-[430px] lg:block" aria-label="Zackvan caravan illustration">
+            <div className="absolute right-4 top-4 h-20 w-20 rounded-full border-8 border-white/60" />
+            <div className="absolute bottom-8 left-2 h-28 w-28 rounded-full border border-brand-400/70 bg-brand-200/60" />
+            <div className="absolute right-10 top-24 h-3 w-3 rounded-full bg-brand-700" />
+            <div className="absolute left-12 top-16 h-2 w-2 rounded-full bg-white" />
+            <div className="relative flex h-full min-h-[430px] items-center justify-center rounded-[2.5rem] border border-white/70 bg-white/45 p-5 shadow-2xl shadow-brand-800/10 backdrop-blur-sm">
+              <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[2rem] border border-brand-200/80 bg-brand-50/80">
+                <Image
+                  src="/icon.png"
+                  alt="Zackvan camper van ready for an Algerian road trip"
+                  fill
+                  priority
+                  sizes="(min-width: 1024px) 42vw, 0px"
+                  className="object-contain p-2 transition duration-700 ease-out hover:scale-[1.03]"
+                />
+                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-lg backdrop-blur">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-800">Road-ready stays</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">Your next wild weekend starts here.</p>
+                  </div>
+                  <VanIcon className="h-7 w-7 shrink-0 text-brand-700" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
