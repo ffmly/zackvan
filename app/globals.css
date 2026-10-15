@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply text-slate-900 antialiased;
+  background: #fcf9f2;
+}
+
+h1,
+h2,
+h3 {
+  color: #dbc8a3;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-300;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.legal-prose h4 {
+  @apply mt-5 text-sm font-semibold text-slate-900;
+}
+.legal-prose p {
+  @apply mb-3 text-sm leading-relaxed text-slate-600;
+}
+
+.zakivan-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-container {
+  font-family: inherit;
+  background: #fcf9f2;
+  z-index: 0;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.15);
+}
+.leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: 13px;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-card,
+  .print-card * {
+    visibility: visible !important;
+  }
+
+  .print-card {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    box-shadow: none !important;
+  }
+}
+
+.gift-card-print {
+  aspect-ratio: 1.586 / 1;
+  min-height: 220px;
+}
+
+@media print {
+  .print-card.gift-card-print {
+    width: 3.375in !important;
+    height: 2.125in !important;
+    min-height: 0 !important;
+    aspect-ratio: auto;
+    padding: 0.18in !important;
+    border-radius: 0.16in !important;
+  }
+}

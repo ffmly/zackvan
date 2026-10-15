@@ -1,0 +1,368 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ------------------------------------------------------------------ *
+     * Helpers
+     *
+     * Each gift card write is authorised by several independent `allow`
+     * statements rather than one long disjunction. Firestore ORs the
+     * statements that match a request, so a rule that trips over a missing
+     * document only denies its own branch instead of cancelling an unrelated
+     * one — admin issuance stays possible even when a lookup would error.
+     * ------------------------------------------------------------------ */
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userDoc().role == 'admin';
+    }
+
+    function cardPath(code) {
+      return /databases/$(database)/documents/giftCards/$(code);
+    }
+
+    function bookingPath(bookingId) {
+      return /databases/$(database)/documents/bookings/$(bookingId);
+    }
+
+    function ledgerPath(entryId) {
+      return /databases/$(database)/documents/giftCardLedger/$(entryId);
+    }
+
+    /* ------------------------------------------------------------------ *
+     * users
+     * ------------------------------------------------------------------ */
+
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+
+      // Registration may open an account as a renter or an owner. There is no
+      // client path to create an admin.
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role in ['renter', 'owner'];
+
+      // Self-service edits are limited to cosmetic fields plus the one
+      // documented renter -> owner upgrade. Writing role: admin requires an
+      // admin caller, so a user cannot escalate from the browser.
+      allow update: if isAdmin() || (
+        isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'phone', 'photoURL', 'role'])
+        && (
+          request.resource.data.role == resource.data.role
+          || (resource.data.role == 'renter' && request.resource.data.role == 'owner')
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    /* ------------------------------------------------------------------ *
+     * caravans
+     * ------------------------------------------------------------------ */
+
+    match /caravans/{caravanId} {
+      allow read: if resource.data.published == true
+        || (isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin()));
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    /* ------------------------------------------------------------------ *
+     * bookings
+     * ------------------------------------------------------------------ */
+
+    match /bookings/{bookingId} {
+
+      // Arithmetic the client must not be able to fudge: the total follows from
+      // days x rate, credit never exceeds the total, and the handover amount is
+      // exactly the difference. One dinar of tolerance absorbs float rounding.
+      function wellFormedBooking() {
+        return request.resource.data.days >= 1
+          && request.resource.data.endDate > request.resource.data.startDate
+          && request.resource.data.totalPrice
+              >= request.resource.data.days * request.resource.data.pricePerDay - 1
+          && request.resource.data.totalPrice
+              <= request.resource.data.days * request.resource.data.pricePerDay + 1
+          && request.resource.data.giftCardApplied >= 0
+          && request.resource.data.giftCardApplied <= request.resource.data.totalPrice
+          && request.resource.data.cashDue
+              == request.resource.data.totalPrice - request.resource.data.giftCardApplied;
+      }
+
+      // A booking may only claim gift card credit that the same transaction
+      // actually reserved on the card itself.
+      function giftCardMatchesHold() {
+        return request.resource.data.giftCardId is string
+          && request.resource.data.giftCardId.size() > 0
+          && request.resource.data.giftCardCode == request.resource.data.giftCardId
+          && request.resource.data.giftCardApplied > 0
+          && getAfter(cardPath(request.resource.data.giftCardId)).data.code
+              == request.resource.data.giftCardId
+          && getAfter(cardPath(request.resource.data.giftCardId)).data.heldAmount
+              == request.resource.data.giftCardApplied
+          && getAfter(cardPath(request.resource.data.giftCardId)).data.heldBookingId != null;
+      }
+
+      // Plain booking, no credit claimed.
+      allow create: if isSignedIn()
+        && request.resource.data.renterId == request.auth.uid
+        && wellFormedBooking()
+        && request.resource.data.giftCardId == null
+        && request.resource.data.giftCardApplied == 0;
+
+      // Booking funded by a gift card. Deliberately a separate statement: if
+      // giftCardId is null the document lookup errors, and that must deny this
+      // branch only.
+      allow create: if isSignedIn()
+        && request.resource.data.renterId == request.auth.uid
+        && wellFormedBooking()
+        && giftCardMatchesHold();
+
+      allow read: if isSignedIn()
+        && (resource.data.renterId == request.auth.uid
+            || resource.data.ownerId == request.auth.uid
+            || isAdmin());
+
+      // An owner may move a booking between the states an owner owns, and only
+      // ever the status field. A renter may only withdraw.
+      allow update: if isSignedIn() && (
+        (
+          resource.data.ownerId == request.auth.uid
+          && request.resource.data.diff(resource.data)
+              .affectedKeys().hasOnly(['status'])
+          && request.resource.data.status in ['accepted', 'rejected', 'completed']
+        )
+        || (
+          resource.data.renterId == request.auth.uid
+          && request.resource.data.status == 'cancelled'
+          && resource.data.status in ['pending', 'accepted']
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    /* ------------------------------------------------------------------ *
+     * contracts
+     * ------------------------------------------------------------------ */
+
+    match /contracts/{contractId} {
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.liabilityAcknowledged == true
+        && request.resource.data.contentHash is string
+        && request.resource.data.contentHash.size() > 0;
+      allow read: if isSignedIn()
+        && (resource.data.userId == request.auth.uid
+            || resource.data.ownerId == request.auth.uid
+            || isAdmin());
+      allow update, delete: if false;
+    }
+
+    /* ------------------------------------------------------------------ *
+     * mapLocations
+     * ------------------------------------------------------------------ */
+
+    match /mapLocations/{locationId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    /* ------------------------------------------------------------------ *
+     * giftCards — the document ID is the code, e.g. ZK-XXXX-XXXX-XXXX
+     * ------------------------------------------------------------------ */
+
+    match /giftCards/{code} {
+      allow read: if isAdmin()
+        || (isSignedIn() && (
+          resource.data.recipientUid == request.auth.uid
+          || (resource.data.recipientUid == null
+              && (resource.data.recipientEmail == request.auth.token.email
+                  || resource.data.recipientEmail == null))
+        ));
+
+      // Issuance. The audit row has to travel in the same transaction, which is
+      // what makes the "issued" entry impossible to omit or backdate.
+      allow create: if isAdmin()
+        && getAfter(ledgerPath('issued_' + code)).data.giftCardId == code
+        && getAfter(ledgerPath('issued_' + code)).data.amount
+            == request.resource.data.initialAmount
+        && getAfter(ledgerPath('issued_' + code)).data.balanceAfter
+            == request.resource.data.balance;
+
+      allow delete: if isAdmin();
+
+      // Voiding and any other admin correction.
+      allow update: if isAdmin();
+
+      // Claiming a card that was minted to this email address and has not been
+      // attached to an account yet. Balance must be untouched.
+      allow update: if isSignedIn()
+        && resource.data.recipientUid == null
+        && (resource.data.recipientEmail == request.auth.token.email
+            || resource.data.recipientEmail == null)
+        && request.resource.data.recipientUid == request.auth.uid
+        && request.resource.data.balance == resource.data.balance
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['recipientUid', 'recipientName', 'recipientClaimedAt']);
+
+      // Spending. The balance can only fall and never below zero, the debit is
+      // recorded as a hold against the booking that caused it, and the matching
+      // ledger row must be in the same transaction. Because the rule is checked
+      // against committed state, a racing second spend that would overdraw is
+      // rejected instead of accepted.
+      allow update: if isSignedIn()
+        && (resource.data.recipientUid == request.auth.uid
+            || resource.data.recipientUid == null)
+        && resource.data.status in ['active', 'used']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'recipientUid', 'balance', 'status', 'lastUsedAt', 'lastUsedBy',
+              'heldBookingId', 'heldAmount'])
+        && request.resource.data.recipientUid == request.auth.uid
+        && request.resource.data.balance <= resource.data.balance
+        && request.resource.data.balance >= 0
+        && request.resource.data.status in ['active', 'used']
+        && request.resource.data.heldAmount
+            == resource.data.balance - request.resource.data.balance
+        && request.resource.data.heldBookingId is string
+        && request.resource.data.heldBookingId.size() > 0
+        && getAfter(ledgerPath('applied_' + request.resource.data.heldBookingId)).data.amount
+            == -request.resource.data.heldAmount;
+
+      // Releasing. Only credit that is actually being held for a booking which
+      // has reached a terminal state can come back, only in the exact amount
+      // recorded as the hold, and only once — the hold is cleared here, so a
+      // replay finds nothing to release.
+      allow update: if isSignedIn()
+        && resource.data.status in ['active', 'used']
+        && resource.data.heldBookingId is string
+        && resource.data.heldBookingId.size() > 0
+        && exists(bookingPath(resource.data.heldBookingId))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'balance', 'status', 'lastUsedAt', 'lastUsedBy',
+              'heldBookingId', 'heldAmount'])
+        && request.resource.data.status == 'active'
+        && request.resource.data.heldBookingId == null
+        && request.resource.data.heldAmount == 0
+        && request.resource.data.balance
+            == resource.data.balance + resource.data.heldAmount
+        && request.resource.data.balance <= resource.data.initialAmount
+        && get(bookingPath(resource.data.heldBookingId)).data.giftCardId == code
+        && get(bookingPath(resource.data.heldBookingId)).data.status
+            in ['cancelled', 'rejected']
+        && (
+          resource.data.recipientUid == request.auth.uid
+          || get(bookingPath(resource.data.heldBookingId)).data.ownerId == request.auth.uid
+        )
+        && getAfter(ledgerPath('released_' + resource.data.heldBookingId)).data.amount
+            == resource.data.heldAmount;
+    }
+
+    /* ------------------------------------------------------------------ *
+     * giftCardLedger — append only, and every row is cross-checked against
+     * the card write it is supposed to describe.
+     *
+     * Row IDs are deterministic: issued_<code>, claimed_<code>,
+     * applied_<bookingId>, released_<bookingId>, voided_<code>. Replaying an
+     * operation therefore collides on the document ID rather than duplicating
+     * the movement.
+     * ------------------------------------------------------------------ */
+
+    match /giftCardLedger/{entryId} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+          && exists(cardPath(resource.data.giftCardId))
+          && get(cardPath(resource.data.giftCardId)).data.recipientUid == request.auth.uid);
+
+      allow create: if isAdmin()
+        && request.resource.data.kind == 'issued'
+        && entryId == 'issued_' + request.resource.data.giftCardId
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.amount == request.resource.data.balanceAfter
+        && request.resource.data.balanceAfter
+            == getAfter(cardPath(request.resource.data.giftCardId)).data.initialAmount;
+
+      allow create: if isAdmin()
+        && request.resource.data.kind == 'voided'
+        && entryId == 'voided_' + request.resource.data.giftCardId
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.balanceAfter == 0
+        && getAfter(cardPath(request.resource.data.giftCardId)).data.status == 'void';
+
+      allow create: if isSignedIn()
+        && request.resource.data.kind == 'claimed'
+        && entryId == 'claimed_' + request.resource.data.giftCardId
+        && request.resource.data.amount == 0
+        && request.resource.data.actorUid == request.auth.uid
+        && get(cardPath(request.resource.data.giftCardId)).data.recipientUid == null
+        && (get(cardPath(request.resource.data.giftCardId)).data.recipientEmail
+            == request.auth.token.email
+            || get(cardPath(request.resource.data.giftCardId)).data.recipientEmail == null)
+        && getAfter(cardPath(request.resource.data.giftCardId)).data.recipientUid
+            == request.auth.uid
+        && request.resource.data.balanceAfter
+            == getAfter(cardPath(request.resource.data.giftCardId)).data.balance;
+
+      allow create: if isSignedIn()
+        && request.resource.data.kind == 'applied'
+        && entryId == 'applied_' + request.resource.data.bookingId
+        && request.resource.data.amount < 0
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.bookingId.size() > 0
+        && request.resource.data.giftCardId
+            == getAfter(cardPath(request.resource.data.giftCardId)).data.code
+        && request.resource.data.bookingId
+            == getAfter(cardPath(request.resource.data.giftCardId)).data.heldBookingId
+        && request.resource.data.amount
+            == -getAfter(cardPath(request.resource.data.giftCardId)).data.heldAmount
+        && request.resource.data.balanceAfter
+            == getAfter(cardPath(request.resource.data.giftCardId)).data.balance
+        && getAfter(bookingPath(request.resource.data.bookingId)).data.renterId
+            == request.auth.uid
+        && getAfter(bookingPath(request.resource.data.bookingId)).data.giftCardId
+            == request.resource.data.giftCardId
+        && getAfter(bookingPath(request.resource.data.bookingId)).data.giftCardApplied
+            == -request.resource.data.amount;
+
+      allow create: if isSignedIn()
+        && request.resource.data.kind == 'released'
+        && entryId == 'released_' + request.resource.data.bookingId
+        && request.resource.data.amount > 0
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.bookingId.size() > 0
+        && request.resource.data.giftCardId
+            == get(cardPath(request.resource.data.giftCardId)).data.code
+        && request.resource.data.bookingId
+            == get(cardPath(request.resource.data.giftCardId)).data.heldBookingId
+        && request.resource.data.amount
+            == get(cardPath(request.resource.data.giftCardId)).data.heldAmount
+        && request.resource.data.balanceAfter
+            == getAfter(cardPath(request.resource.data.giftCardId)).data.balance
+        && get(bookingPath(request.resource.data.bookingId)).data.status
+            in ['cancelled', 'rejected']
+        && get(bookingPath(request.resource.data.bookingId)).data.giftCardId
+            == request.resource.data.giftCardId
+        && (
+          get(cardPath(request.resource.data.giftCardId)).data.recipientUid
+              == request.auth.uid
+          || get(bookingPath(request.resource.data.bookingId)).data.ownerId
+              == request.auth.uid
+        );
+
+      // The trail itself can never be rewritten or removed.
+      allow update, delete: if false;
+    }
+  }
+}
