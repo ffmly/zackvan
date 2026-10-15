@@ -79,6 +79,17 @@ service cloud.firestore {
         && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
 
+    /* Vehicle registration cards are never part of the public caravan data. */
+    match /vehicleDocuments/{caravanId} {
+      allow read: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create, update: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && get(/databases/$(database)/documents/caravans/$(caravanId)).data.ownerId
+            == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
     /* ------------------------------------------------------------------ *
      * bookings
      * ------------------------------------------------------------------ */

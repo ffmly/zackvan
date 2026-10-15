@@ -8,11 +8,11 @@ export interface UploadSignature {
   cloudName: string;
 }
 
-export async function fetchUploadSignature(): Promise<UploadSignature> {
+export async function fetchUploadSignature(folder?: string): Promise<UploadSignature> {
   const res = await fetch('/api/cloudinary/sign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
+    body: JSON.stringify(folder ? { folder } : {}),
   });
   if (!res.ok) {
     throw new Error('Could not start the image upload. Try again.');

@@ -74,6 +74,7 @@ export async function listAllBookingsForAdmin(): Promise<Booking[]> {
         ownerName: (data.ownerName as string) ?? '',
         renterId: (data.renterId as string) ?? '',
         renterName: (data.renterName as string) ?? '',
+        renterPhone: data.renterPhone as string | undefined,
         startDate: timestampMs(data.startDate),
         endDate: timestampMs(data.endDate),
         days: (data.days as number) ?? 1,

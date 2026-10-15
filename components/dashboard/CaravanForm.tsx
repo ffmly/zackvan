@@ -16,6 +16,7 @@ import type {
 import { CARAVAN_TYPES } from '@/lib/types';
 import { EXTRA_FEATURES } from '@/lib/constants';
 import { createCaravan, updateCaravan } from '@/lib/services/caravans';
+import { getVehicleDocument, saveVehicleDocument } from '@/lib/services/vehicle-documents';
 import { WILAYAS } from '@/lib/constants';
 
 interface FormState {
@@ -36,6 +37,7 @@ interface FormState {
   ownerPhone: string;
   published: boolean;
   images: CloudinaryImage[];
+  registrationCard: CloudinaryImage | null;
 }
 
 function toForm(caravan?: Caravan): FormState {
@@ -59,6 +61,7 @@ function toForm(caravan?: Caravan): FormState {
     ownerPhone: caravan?.ownerPhone ?? '',
     published: caravan?.published ?? false,
     images: caravan?.images ?? [],
+    registrationCard: null,
   };
 }
 
@@ -80,6 +83,9 @@ function validate(form: FormState): Record<string, string> {
     errors.beds = 'Enter the number of beds.';
   }
   if (form.images.length === 0) errors.images = 'Add at least one photo.';
+  if (!form.registrationCard) {
+    errors.registrationCard = 'Upload the vehicle registration card (carte grise).';
+  }
   return errors;
 }
 
@@ -92,6 +98,19 @@ export default function CaravanForm({ existing }: { existing?: Caravan }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => setForm(toForm(existing)), [existing]);
+
+  useEffect(() => {
+    if (!existing?.id) return;
+    let cancelled = false;
+    void getVehicleDocument(existing.id)
+      .then((document) => {
+        if (document && !cancelled) set('registrationCard', document.registrationCard);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  // The listing ID is the document key; reloading it is intentional on listing change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existing?.id]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -152,6 +171,8 @@ export default function CaravanForm({ existing }: { existing?: Caravan }) {
           unavailableRanges: [],
         });
       }
+      if (!user || !form.registrationCard) throw new Error('Vehicle registration card is required.');
+      await saveVehicleDocument(id, user.uid, form.registrationCard);
       router.push('/dashboard');
     } catch (err) {
       setServerError(
@@ -256,6 +277,23 @@ export default function CaravanForm({ existing }: { existing?: Caravan }) {
             maxLength={2000}
           />
         </Field>
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-brand-200 bg-brand-50/40 p-6 shadow-sm">
+        <div>
+          <h2 className="font-bold text-slate-900">Vehicle registration card</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Upload the carte grise for this caravan. It is private and visible only to you and Zackvan administrators.
+          </p>
+        </div>
+        <ImageUploader
+          value={form.registrationCard ? [form.registrationCard] : []}
+          onChange={(images) => set('registrationCard', images[0] ?? null)}
+          maxImages={1}
+          folder="zakivan/vehicle-documents"
+          label="Upload the vehicle registration card"
+        />
+        {errors.registrationCard && <p className="text-sm font-medium text-rose-600">{errors.registrationCard}</p>}
       </section>
 
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

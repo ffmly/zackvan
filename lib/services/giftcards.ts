@@ -501,6 +501,17 @@ export async function redeemGiftCardAndCreateBooking(params: {
   const db = getDb();
   const code = normalizeGiftCardCode(params.cardCode);
   const bookingId = params.bookingRef.id;
+  const activeBookings = await getDocs(
+    query(
+      collection(db, COLLECTIONS.bookings),
+      where('caravanId', '==', params.booking.caravanId),
+      where('status', 'in', ['pending', 'accepted']),
+      where('endDate', '>', params.booking.startDate),
+    ),
+  );
+  if (activeBookings.docs.some((entry) => Number(entry.data().startDate) < params.booking.endDate)) {
+    fail('These dates were just reserved by another renter. Please choose different dates.');
+  }
 
   return runTransaction(db, async (tx) => {
     const cardRef = doc(db, COLLECTIONS.giftCards, code);

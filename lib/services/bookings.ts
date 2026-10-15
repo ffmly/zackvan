@@ -27,6 +27,7 @@ function mapBooking(id: string, data: Record<string, unknown>): Booking {
     ownerName: (data.ownerName as string) ?? '',
     renterId: (data.renterId as string) ?? '',
     renterName: (data.renterName as string) ?? '',
+    renterPhone: data.renterPhone as string | undefined,
     startDate: toMs(data.startDate),
     endDate: toMs(data.endDate),
     days: (data.days as number) ?? 1,

@@ -12,6 +12,14 @@ export interface CloudinaryImage {
   publicId: string;
 }
 
+/** Private vehicle-registration image. Stored outside the public caravan listing. */
+export interface VehicleDocument {
+  caravanId: string;
+  ownerId: string;
+  registrationCard: CloudinaryImage;
+  uploadedAt: number;
+}
+
 export interface AvailabilityRange {
   start: number;
   end: number;
@@ -91,6 +99,7 @@ export interface Booking {
   ownerName: string;
   renterId: string;
   renterName: string;
+  renterPhone?: string;
   startDate: number;
   endDate: number;
   days: number;

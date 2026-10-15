@@ -22,9 +22,15 @@ const MAX_SIZE_MB = 5;
 export default function ImageUploader({
   value,
   onChange,
+  maxImages = MAX_IMAGES,
+  folder,
+  label = 'Click or drag photos here',
 }: {
   value: CloudinaryImage[];
   onChange: (images: CloudinaryImage[]) => void;
+  maxImages?: number;
+  folder?: string;
+  label?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<UploadingItem[]>([]);
@@ -41,9 +47,9 @@ export default function ImageUploader({
     if (!files || files.length === 0) return;
     setError(null);
 
-    const room = MAX_IMAGES - value.length - uploading.length;
+    const room = maxImages - value.length - uploading.length;
     if (room <= 0) {
-      setError(`You can upload up to ${MAX_IMAGES} images.`);
+      setError(`You can upload up to ${maxImages} image${maxImages === 1 ? '' : 's'}.`);
       return;
     }
 
@@ -57,7 +63,7 @@ export default function ImageUploader({
       const key = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       setUploading((prev) => [...prev, { key, name: file.name, progress: 0 }]);
       try {
-        const signature = await fetchUploadSignature();
+        const signature = await fetchUploadSignature(folder);
         const image = await uploadToCloudinary(file, signature, (percent) => {
           setUploading((prev) =>
             prev.map((u) => (u.key === key ? { ...u, progress: percent } : u)),
@@ -91,10 +97,10 @@ export default function ImageUploader({
       >
         <CloudUpload className="h-8 w-8 text-brand-600" />
         <p className="text-sm font-medium text-slate-700">
-          Click or drag photos here
+          {label}
         </p>
         <p className="text-xs text-slate-400">
-          JPG, PNG, WEBP — up to {MAX_SIZE_MB} MB each, max {MAX_IMAGES} images
+          JPG, PNG, WEBP — up to {MAX_SIZE_MB} MB each, max {maxImages} image{maxImages === 1 ? '' : 's'}
         </p>
         <input
           ref={inputRef}

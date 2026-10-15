@@ -20,6 +20,7 @@ import {
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import ContractAccess from '@/components/contract/ContractAccess';
 import { Field, Input } from '@/components/ui/form';
 import { useAuth, RequireAuth } from '@/lib/auth-context';
 import type {
@@ -27,6 +28,7 @@ import type {
   Booking,
   BookingStatus,
   Caravan,
+  ContractRecord,
   GiftCard,
   GiftCardKind,
   GiftCardLedgerEntry,
@@ -50,6 +52,7 @@ import {
   setCaravanPublished,
 } from '@/lib/services/caravans';
 import { getBookingsForOwner, getBookingsForRenter, updateBookingStatus } from '@/lib/services/bookings';
+import { getContractsForOwner } from '@/lib/services/contracts';
 import { BOOKING_STATUS_META } from '@/lib/constants';
 import { cn, dateInputToMs, formatDZD, formatDate, shortId } from '@/lib/utils';
 
@@ -696,6 +699,7 @@ function DashboardContent() {
 
   const [myCaravans, setMyCaravans] = useState<Caravan[]>([]);
   const [receivedBookings, setReceivedBookings] = useState<Booking[]>([]);
+  const [receivedContracts, setReceivedContracts] = useState<ContractRecord[]>([]);
   const [myTrips, setMyTrips] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [availabilityFor, setAvailabilityFor] = useState<Caravan | null>(null);
@@ -710,6 +714,7 @@ function DashboardContent() {
         tasks.push(
           listCaravans({ ownerId: user.uid, includeUnpublished: true }).then(setMyCaravans),
           getBookingsForOwner(user.uid).then(setReceivedBookings),
+          getContractsForOwner(user.uid).then(setReceivedContracts),
         );
       }
       tasks.push(getBookingsForRenter(user.uid).then(setMyTrips));
@@ -810,13 +815,13 @@ function DashboardContent() {
         ) : tab === 'listings' ? (
           <ListingsTab caravans={myCaravans} onDelete={(c) => setConfirmDelete(c)} onAvailability={(c) => setAvailabilityFor(c)} onChanged={refresh} />
         ) : tab === 'requests' ? (
-          <RequestsTab bookings={receivedBookings} isOwner actorUid={user!.uid} onChanged={refresh} />
+          <RequestsTab bookings={receivedBookings} caravans={myCaravans} contracts={receivedContracts} isOwner actorUid={user!.uid} onChanged={refresh} />
         ) : tab === 'wallet' ? (
           <WalletTab />
         ) : tab === 'giftcards' ? (
           <GiftCardsAdminTab user={user!} />
         ) : (
-          <RequestsTab bookings={myTrips} isOwner={false} actorUid={user!.uid} onChanged={refresh} />
+          <RequestsTab bookings={myTrips} caravans={[]} contracts={[]} isOwner={false} actorUid={user!.uid} onChanged={refresh} />
         )}
       </div>
 
@@ -935,11 +940,15 @@ function ListingsTab({
 
 function RequestsTab({
   bookings,
+  caravans,
+  contracts,
   isOwner,
   actorUid,
   onChanged,
 }: {
   bookings: Booking[];
+  caravans: Caravan[];
+  contracts: ContractRecord[];
   isOwner: boolean;
   actorUid: string;
   onChanged: () => void;
@@ -999,11 +1008,21 @@ function RequestsTab({
               <p className="mt-0.5 text-xs text-slate-400">
                 {isOwner ? `Requested by ${b.renterName}` : `Owner: ${b.ownerName}`} · Contract signed electronically
               </p>
+              {isOwner && (
+                <p className="mt-1 text-sm font-medium text-slate-700">
+                  Renter contact: {b.renterPhone || 'No phone number supplied'}
+                </p>
+              )}
               {b.message && (
                 <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm italic text-slate-600">
                   “{b.message}”
                 </p>
               )}
+              {isOwner && (() => {
+                const caravan = caravans.find((item) => item.id === b.caravanId);
+                const contract = contracts.find((item) => item.bookingId === b.id);
+                return caravan && contract ? <div className="mt-3"><ContractAccess booking={b} caravan={caravan} contract={contract} compact /></div> : null;
+              })()}
             </div>
 
             <div className="flex gap-2">

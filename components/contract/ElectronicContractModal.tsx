@@ -224,6 +224,7 @@ export default function ElectronicContractModal({
         ownerName: caravan.ownerName,
         renterId: renter.uid,
         renterName: renter.displayName,
+        ...(renter.phone?.trim() ? { renterPhone: renter.phone.trim() } : {}),
         startDate,
         endDate,
         days,

@@ -44,6 +44,7 @@ export const COLLECTIONS = {
   caravans: 'caravans',
   bookings: 'bookings',
   contracts: 'contracts',
+  vehicleDocuments: 'vehicleDocuments',
   mapLocations: 'mapLocations',
   giftCards: 'giftCards',
   giftCardLedger: 'giftCardLedger',
