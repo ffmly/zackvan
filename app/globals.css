@@ -15,6 +15,16 @@ body {
   background: #fcf9f2;
 }
 
+html[dir='rtl'] body {
+  direction: rtl;
+}
+
+html[dir='rtl'] input,
+html[dir='rtl'] textarea,
+html[dir='rtl'] select {
+  text-align: right;
+}
+
 h1,
 h2,
 h3 {

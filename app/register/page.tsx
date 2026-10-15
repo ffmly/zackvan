@@ -9,19 +9,20 @@ import { Field, Input } from '@/components/ui/form';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/lib/types';
+import { useLanguage } from '@/lib/i18n';
 
-const ROLE_CARDS: { role: UserRole; icon: typeof Caravan; title: string; desc: string }[] = [
+const ROLE_CARDS: { role: UserRole; icon: typeof Caravan; titleKey: 'register.renterTitle' | 'register.ownerTitle'; descKey: 'register.renterBody' | 'register.ownerBody' }[] = [
   {
     role: 'renter',
     icon: Tent,
-    title: 'I want to rent',
-    desc: 'Book caravans and explore Algeria',
+    titleKey: 'register.renterTitle',
+    descKey: 'register.renterBody',
   },
   {
     role: 'owner',
     icon: Caravan,
-    title: 'I want to list',
-    desc: 'Rent out my caravan and earn',
+    titleKey: 'register.ownerTitle',
+    descKey: 'register.ownerBody',
   },
 ];
 
@@ -29,6 +30,7 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signUpEmail, signInWithGoogle } = useAuth();
+  const { t } = useLanguage();
 
   const initialRole = (searchParams.get('role') === 'owner' ? 'owner' : 'renter') as UserRole;
 
@@ -78,18 +80,16 @@ function RegisterForm() {
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-700 text-white">
           <UserRound className="h-6 w-6" />
         </span>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">
-          Create your account
-        </h1>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">{t('register.title')}</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Join Algeria&apos;s caravan community — free, in two minutes.
+          {t('register.subtitle')}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <fieldset>
           <legend className="mb-2 text-sm font-medium text-slate-700">
-            I am joining as…
+            {t('register.joinAs')}
           </legend>
           <div className="grid grid-cols-2 gap-3">
             {ROLE_CARDS.map((card) => (
@@ -110,14 +110,14 @@ function RegisterForm() {
                     role === card.role ? 'text-brand-700' : 'text-slate-400',
                   )}
                 />
-                <p className="mt-2 text-sm font-bold text-slate-900">{card.title}</p>
-                <p className="mt-0.5 text-xs text-slate-500">{card.desc}</p>
+                <p className="mt-2 text-sm font-bold text-slate-900">{t(card.titleKey)}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{t(card.descKey)}</p>
               </button>
             ))}
           </div>
         </fieldset>
 
-        <Field label="Full name" htmlFor="name" required>
+        <Field label={t('register.fullName')} htmlFor="name" required>
           <Input
             id="name"
             required
@@ -127,7 +127,7 @@ function RegisterForm() {
             autoComplete="name"
           />
         </Field>
-        <Field label="Email" htmlFor="reg-email" required>
+        <Field label={t('auth.email')} htmlFor="reg-email" required>
           <Input
             id="reg-email"
             type="email"
@@ -138,7 +138,7 @@ function RegisterForm() {
             autoComplete="email"
           />
         </Field>
-        <Field label="Phone" htmlFor="phone" hint="Used by owners/renters to coordinate handover.">
+        <Field label={t('register.phone')} htmlFor="phone" hint={t('register.phoneHint')}>
           <Input
             id="phone"
             type="tel"
@@ -148,7 +148,7 @@ function RegisterForm() {
             autoComplete="tel"
           />
         </Field>
-        <Field label="Password" htmlFor="reg-password" required>
+        <Field label={t('auth.password')} htmlFor="reg-password" required>
           <Input
             id="reg-password"
             type="password"
@@ -168,13 +168,13 @@ function RegisterForm() {
         )}
 
         <Button type="submit" loading={loading} className="w-full" size="lg">
-          Create account as {role}
+          {t('register.createAs', { role: role === 'owner' ? t('register.ownerTitle') : t('register.renterTitle') })}
         </Button>
 
         <div className="relative py-1 text-center">
           <span className="absolute inset-x-0 top-1/2 h-px bg-slate-200" />
           <span className="relative bg-white px-3 text-xs font-medium uppercase tracking-wider text-slate-400">
-            or
+            {t('auth.or')}
           </span>
         </div>
 
@@ -185,14 +185,14 @@ function RegisterForm() {
           loading={googleLoading}
           onClick={handleGoogle}
         >
-          Sign up with Google
+          {t('register.google')}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">
-        Already have an account?{' '}
+        {t('register.already')}{' '}
         <Link href="/login" className="font-semibold text-brand-700 hover:text-brand-800">
-          Log in
+          {t('nav.login')}
         </Link>
       </p>
     </div>

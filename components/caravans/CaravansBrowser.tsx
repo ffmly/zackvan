@@ -10,6 +10,7 @@ import { CARAVAN_TYPES, type Caravan, type CaravanType } from '@/lib/types';
 import { listCaravans } from '@/lib/services/caravans';
 import { WILAYAS } from '@/lib/constants';
 import { dateInputToMs } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n';
 
 export interface FilterState {
   q: string;
@@ -57,6 +58,7 @@ function serialize(filters: FilterState): string {
 }
 
 export default function CaravansBrowser() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<FilterState>(() =>
     parseFilters(new URLSearchParams(searchParams.toString())),
@@ -138,22 +140,22 @@ export default function CaravansBrowser() {
 
   const filterPanel = (
     <div className="space-y-5">
-      <Field label="Keyword" htmlFor="f-q">
+      <Field label={t('browse.keyword')} htmlFor="f-q">
         <Input
           id="f-q"
-          placeholder="e.g. solar, family, desert…"
+          placeholder={t('browse.keywordPlaceholder')}
           value={filters.q}
           onChange={(e) => update('q', e.target.value)}
         />
       </Field>
 
-      <Field label="Wilaya" htmlFor="f-wilaya">
+      <Field label={t('browse.wilaya')} htmlFor="f-wilaya">
         <Select
           id="f-wilaya"
           value={filters.wilaya}
           onChange={(e) => update('wilaya', e.target.value)}
         >
-          <option value="">All wilayas</option>
+          <option value="">{t('browse.allWilayas')}</option>
           {WILAYAS.map((w) => (
             <option key={w} value={w}>{w}</option>
           ))}
@@ -161,7 +163,7 @@ export default function CaravansBrowser() {
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Min price (DA)" htmlFor="f-min">
+        <Field label={t('browse.minPrice')} htmlFor="f-min">
           <Input
             id="f-min"
             type="number"
@@ -171,12 +173,12 @@ export default function CaravansBrowser() {
             onChange={(e) => update('minPrice', e.target.value)}
           />
         </Field>
-        <Field label="Max price (DA)" htmlFor="f-max">
+        <Field label={t('browse.maxPrice')} htmlFor="f-max">
           <Input
             id="f-max"
             type="number"
             min={0}
-            placeholder="Any"
+            placeholder={t('browse.any')}
             value={filters.maxPrice}
             onChange={(e) => update('maxPrice', e.target.value)}
           />
@@ -184,24 +186,24 @@ export default function CaravansBrowser() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Guests" htmlFor="f-guests">
+        <Field label={t('browse.guests')} htmlFor="f-guests">
           <Input
             id="f-guests"
             type="number"
             min={1}
             max={12}
-            placeholder="Any"
+            placeholder={t('browse.any')}
             value={filters.guests}
             onChange={(e) => update('guests', e.target.value)}
           />
         </Field>
-        <Field label="Type" htmlFor="f-type">
+        <Field label={t('browse.type')} htmlFor="f-type">
           <Select
             id="f-type"
             value={filters.type}
             onChange={(e) => update('type', e.target.value as CaravanType | '')}
           >
-            <option value="">All types</option>
+            <option value="">{t('browse.allTypes')}</option>
             {CARAVAN_TYPES.map((t) => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
@@ -210,7 +212,7 @@ export default function CaravansBrowser() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Available from" htmlFor="f-start">
+        <Field label={t('browse.availableFrom')} htmlFor="f-start">
           <Input
             id="f-start"
             type="date"
@@ -218,7 +220,7 @@ export default function CaravansBrowser() {
             onChange={(e) => update('start', e.target.value)}
           />
         </Field>
-        <Field label="Until" htmlFor="f-end">
+        <Field label={t('browse.until')} htmlFor="f-end">
           <Input
             id="f-end"
             type="date"
@@ -230,7 +232,7 @@ export default function CaravansBrowser() {
 
       {activeCount > 0 && (
         <Button variant="ghost" size="sm" onClick={() => setFilters(EMPTY_FILTERS)}>
-          <X className="h-3.5 w-3.5" /> Clear all filters
+          <X className="h-3.5 w-3.5" /> {t('browse.clear')}
         </Button>
       )}
     </div>
@@ -241,12 +243,12 @@ export default function CaravansBrowser() {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Browse caravans
+            {t('browse.title')}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             {loading
-              ? 'Searching listings…'
-              : `${sorted.length} caravan${sorted.length === 1 ? '' : 's'} available`}
+              ? t('browse.searching')
+              : `${sorted.length} ${sorted.length === 1 ? t('browse.availableOne') : t('browse.availableMany')}`}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -257,17 +259,17 @@ export default function CaravansBrowser() {
             onClick={() => setMobileFiltersOpen((v) => !v)}
           >
             <SlidersHorizontal className="h-4 w-4" />
-            Filters{activeCount > 0 ? ` (${activeCount})` : ''}
+            {t('browse.filters')}{activeCount > 0 ? ` (${activeCount})` : ''}
           </Button>
           <Select
             value={sort}
             onChange={(e) => setSort(e.target.value as typeof sort)}
             className="w-auto"
-            aria-label="Sort results"
+            aria-label={t('browse.filters')}
           >
-            <option value="newest">Newest first</option>
-            <option value="price_asc">Price: low to high</option>
-            <option value="price_desc">Price: high to low</option>
+            <option value="newest">{t('browse.newest')}</option>
+            <option value="price_asc">{t('browse.priceLow')}</option>
+            <option value="price_desc">{t('browse.priceHigh')}</option>
           </Select>
         </div>
       </div>
@@ -275,7 +277,7 @@ export default function CaravansBrowser() {
       <div className="flex gap-8">
         <aside className="sticky top-24 hidden h-fit w-72 shrink-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:block">
           <h2 className="mb-4 flex items-center gap-2 font-bold text-slate-900">
-            <SlidersHorizontal className="h-4 w-4" /> Filters
+            <SlidersHorizontal className="h-4 w-4" /> {t('browse.filters')}
           </h2>
           {filterPanel}
         </aside>
@@ -284,7 +286,7 @@ export default function CaravansBrowser() {
           <div className="fixed inset-x-0 bottom-0 top-16 z-40 overflow-y-auto bg-white p-5 shadow-2xl lg:hidden">
             {filterPanel}
             <Button className="mt-6 w-full" onClick={() => setMobileFiltersOpen(false)}>
-              Show {sorted.length} results
+              {t('browse.showResults', { count: sorted.length })}
             </Button>
           </div>
         )}
@@ -299,9 +301,9 @@ export default function CaravansBrowser() {
           ) : sorted.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center">
               <Search className="mx-auto h-10 w-10 text-slate-300" />
-              <p className="mt-3 font-semibold text-slate-700">No caravans match your filters</p>
+              <p className="mt-3 font-semibold text-slate-700">{t('browse.noMatch')}</p>
               <p className="mt-1 text-sm text-slate-500">
-                Try widening the dates or clearing some criteria.
+                {t('browse.widen')}
               </p>
             </div>
           ) : (

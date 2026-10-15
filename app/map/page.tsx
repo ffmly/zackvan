@@ -9,10 +9,12 @@ import { LOCATION_TYPES, type LocationType, type MapLocation } from '@/lib/types
 import { listMapLocations } from '@/lib/services/locations';
 import { LOCATION_TYPE_META, WATER_META } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n';
 
 type TypeFilter = LocationType | 'all';
 
 export default function MapPage() {
+  const { t } = useLanguage();
   const [locations, setLocations] = useState<MapLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export default function MapPage() {
     listMapLocations()
       .then(setLocations)
       .catch(() =>
-        setError('Could not load map locations. Check your connection and refresh.'),
+        setError(t('map.error')),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -69,10 +71,10 @@ export default function MapPage() {
       >
         <div className="space-y-3 border-b border-slate-100 p-4">
           <h1 className="text-lg font-bold text-slate-900">
-            Nature &amp; Camping Map
+            {t('map.title')}
           </h1>
           <Input
-            placeholder="Search a park, forest, wilaya…"
+            placeholder={t('map.search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -87,30 +89,30 @@ export default function MapPage() {
                   : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-50',
               )}
             >
-              All ({locations.length})
+              {t('map.all')} ({locations.length})
             </button>
-            {LOCATION_TYPES.map((t) => (
+            {LOCATION_TYPES.map((type) => (
               <button
-                key={t}
+                key={type}
                 type="button"
-                onClick={() => setTypeFilter(t)}
+                onClick={() => setTypeFilter(type)}
                 className={cn(
                   'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition',
-                  typeFilter === t
+                  typeFilter === type
                     ? 'text-slate-900 ring-brand-300'
                     : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-50',
                 )}
                 style={
-                  typeFilter === t
-                    ? { backgroundColor: LOCATION_TYPE_META[t].hex }
+                  typeFilter === type
+                    ? { backgroundColor: LOCATION_TYPE_META[type].hex }
                     : undefined
                 }
               >
                 <span
-                  className={cn('h-2 w-2 rounded-full', LOCATION_TYPE_META[t].dotClass)}
-                  style={typeFilter === t ? { backgroundColor: '#fcf9f2' } : undefined}
+                  className={cn('h-2 w-2 rounded-full', LOCATION_TYPE_META[type].dotClass)}
+                  style={typeFilter === type ? { backgroundColor: '#fcf9f2' } : undefined}
                 />
-                {LOCATION_TYPE_META[t].label} ({counts.get(t) ?? 0})
+                {locationTypeLabel(type, (key) => t(key))} ({counts.get(type) ?? 0})
               </button>
             ))}
           </div>
@@ -127,7 +129,7 @@ export default function MapPage() {
 
           {!loading && filtered.length === 0 && (
             <p className="px-3 py-8 text-center text-sm text-slate-400">
-              No locations match your search.
+              {t('map.noMatch')}
             </p>
           )}
 
@@ -176,7 +178,7 @@ export default function MapPage() {
           onClick={() => setListOpen((v) => !v)}
           className="absolute left-4 top-4 z-20 flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-lg lg:hidden"
         >
-          <List className="h-4 w-4" /> Locations
+          <List className="h-4 w-4" /> {t('map.locations')}
         </button>
 
         {error && (
@@ -203,6 +205,12 @@ export default function MapPage() {
       <LocationDrawer location={selected} onClose={() => setSelectedId(null)} />
     </div>
   );
+}
+
+function locationTypeLabel(type: LocationType, translate: (key: 'map.park' | 'map.forest' | 'map.campsite') => string) {
+  if (type === 'national_park') return translate('map.park');
+  if (type === 'forest') return translate('map.forest');
+  return translate('map.campsite');
 }
 
 function DropletsLabel({ water }: { water: MapLocation['water'] }) {

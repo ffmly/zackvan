@@ -7,11 +7,13 @@ import { Caravan } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/form';
 import { useAuth } from '@/lib/auth-context';
+import { useLanguage } from '@/lib/i18n';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signInEmail, signInWithGoogle } = useAuth();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +30,7 @@ function LoginForm() {
       await signInEmail(email, password);
       router.replace(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed.');
+      setError(err instanceof Error ? err.message : t('auth.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -41,7 +43,7 @@ function LoginForm() {
       await signInWithGoogle();
       router.replace(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google sign-in failed.');
+      setError(err instanceof Error ? err.message : t('auth.googleFailed'));
     } finally {
       setGoogleLoading(false);
     }
@@ -53,14 +55,14 @@ function LoginForm() {
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-700 text-white">
           <Caravan className="h-6 w-6" />
         </span>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">Welcome back</h1>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">{t('auth.welcome')}</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Sign in to book caravans and manage your listings.
+          {t('auth.loginBody')}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <Field label="Email" htmlFor="email" required>
+        <Field label={t('auth.email')} htmlFor="email" required>
           <Input
             id="email"
             type="email"
@@ -71,7 +73,7 @@ function LoginForm() {
             placeholder="you@example.com"
           />
         </Field>
-        <Field label="Password" htmlFor="password" required>
+        <Field label={t('auth.password')} htmlFor="password" required>
           <Input
             id="password"
             type="password"
@@ -90,13 +92,13 @@ function LoginForm() {
         )}
 
         <Button type="submit" loading={loading} className="w-full" size="lg">
-          Sign in
+          {t('auth.signIn')}
         </Button>
 
         <div className="relative py-1 text-center">
           <span className="absolute inset-x-0 top-1/2 h-px bg-slate-200" />
           <span className="relative bg-white px-3 text-xs font-medium uppercase tracking-wider text-slate-400">
-            or
+            {t('auth.or')}
           </span>
         </div>
 
@@ -107,14 +109,14 @@ function LoginForm() {
           loading={googleLoading}
           onClick={handleGoogle}
         >
-          Continue with Google
+          {t('auth.google')}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">
-        New to Zackvan?{' '}
+        {t('auth.new')}{' '}
         <Link href="/register" className="font-semibold text-brand-700 hover:text-brand-800">
-          Create an account
+          {t('auth.create')}
         </Link>
       </p>
     </div>

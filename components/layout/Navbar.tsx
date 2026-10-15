@@ -6,13 +6,14 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { LANGUAGES, useLanguage, type Language } from '@/lib/i18n';
 import { cn, initials } from '@/lib/utils';
 import type { UserRole } from '@/lib/types';
 
 const NAV_LINKS = [
-  { href: '/', label: 'Home' },
-  { href: '/caravans', label: 'Caravans' },
-  { href: '/map', label: 'Nature Map' },
+  { href: '/', labelKey: 'nav.home' as const },
+  { href: '/caravans', labelKey: 'nav.caravans' as const },
+  { href: '/map', labelKey: 'nav.map' as const },
 ];
 
 const ROLE_BADGE_CLASS: Record<UserRole, string> = {
@@ -25,6 +26,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -73,12 +75,13 @@ export default function Navbar() {
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
               )}
             >
-              {link.label}
+              {t(link.labelKey)}
             </Link>
           ))}
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <LanguageSelect language={language} setLanguage={setLanguage} label={t('nav.language')} />
           {user ? (
             <div className="relative" ref={menuRef}>
               <button
@@ -120,14 +123,14 @@ export default function Navbar() {
                     href="/dashboard"
                     className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
                   >
-                    <LayoutDashboard className="h-4 w-4" /> Dashboard
+                    <LayoutDashboard className="h-4 w-4" /> {t('nav.dashboard')}
                   </Link>
                   {user.role === 'admin' && (
                     <Link
                       href="/dashboard/admin"
                       className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-50"
                     >
-                      Admin workspace
+                      {t('nav.admin')}
                     </Link>
                   )}
                   <button
@@ -135,7 +138,7 @@ export default function Navbar() {
                     onClick={handleLogout}
                     className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50"
                   >
-                    <LogOut className="h-4 w-4" /> Sign out
+                    <LogOut className="h-4 w-4" /> {t('nav.signOut')}
                   </button>
                 </div>
               )}
@@ -146,13 +149,13 @@ export default function Navbar() {
                 href="/login"
                 className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
               >
-                Log in
+                {t('nav.login')}
               </Link>
               <Link
                 href="/register"
                 className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
               >
-                Get started
+                {t('nav.getStarted')}
               </Link>
             </>
           )}
@@ -162,7 +165,7 @@ export default function Navbar() {
           type="button"
           className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:hidden"
           onClick={() => setMobileOpen((v) => !v)}
-          aria-label="Toggle menu"
+          aria-label={t('nav.toggleMenu')}
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -182,24 +185,25 @@ export default function Navbar() {
                     : 'text-slate-600 hover:bg-slate-100',
                 )}
               >
-                {link.label}
+                {t(link.labelKey)}
               </Link>
             ))}
             <div className="mt-2 border-t border-slate-100 pt-3">
+              <LanguageSelect language={language} setLanguage={setLanguage} label={t('nav.language')} fullWidth />
               {user ? (
                 <>
                   <Link
                     href="/dashboard"
                     className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
                   >
-                    Dashboard ({user.role})
+                    {t('nav.dashboard')} ({user.role})
                   </Link>
                   {user.role === 'admin' && (
                     <Link
                       href="/dashboard/admin"
                       className="block rounded-lg px-3 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-50"
                     >
-                      Admin workspace
+                      {t('nav.admin')}
                     </Link>
                   )}
                   <button
@@ -207,7 +211,7 @@ export default function Navbar() {
                     onClick={handleLogout}
                     className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50"
                   >
-                    Sign out
+                    {t('nav.signOut')}
                   </button>
                 </>
               ) : (
@@ -216,13 +220,13 @@ export default function Navbar() {
                     href="/login"
                     className="flex-1 rounded-lg border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-700"
                   >
-                    Log in
+                    {t('nav.login')}
                   </Link>
                   <Link
                     href="/register"
                     className="flex-1 rounded-lg bg-brand-700 px-4 py-2 text-center text-sm font-semibold text-white"
                   >
-                    Get started
+                    {t('nav.getStarted')}
                   </Link>
                 </div>
               )}
@@ -231,5 +235,33 @@ export default function Navbar() {
         </div>
       )}
     </header>
+  );
+}
+
+function LanguageSelect({
+  language,
+  setLanguage,
+  label,
+  fullWidth = false,
+}: {
+  language: Language;
+  setLanguage: (language: Language) => void;
+  label: string;
+  fullWidth?: boolean;
+}) {
+  return (
+    <label className={fullWidth ? 'mb-3 flex w-full' : 'flex'}>
+      <span className="sr-only">{label}</span>
+      <select
+        value={language}
+        onChange={(event) => setLanguage(event.target.value as Language)}
+        aria-label={label}
+        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+      >
+        {LANGUAGES.map((item) => (
+          <option key={item.code} value={item.code}>{item.nativeLabel}</option>
+        ))}
+      </select>
+    </label>
   );
 }
